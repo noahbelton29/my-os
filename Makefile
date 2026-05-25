@@ -9,9 +9,12 @@ build/stage2.bin: src/boot/stage2.asm
 build/stage3.bin: src/boot/stage3.asm
 	nasm -f bin src/boot/stage3.asm -o build/stage3.bin
 
-build/kernel.bin: src/kernel/kernel.c linker.ld
-	gcc -m32 -ffreestanding -fno-pie -nostdlib -nostdinc -c src/kernel/kernel.c -o build/kernel.o
-	ld -m elf_i386 -T linker.ld --oformat binary -o build/kernel.bin build/kernel.o
+build/kernel.bin: src/kernel/kernel.c src/kernel/gdt.c src/kernel/gdt.asm src/kernel/vga.c linker.ld
+	nasm -f elf64 src/kernel/gdt.asm -o build/gdt_asm.o
+	gcc -m64 -ffreestanding -fno-pie -nostdlib -nostdinc -mno-red-zone -fno-stack-protector -I src/kernel -c src/kernel/kernel.c -o build/kernel.o
+	gcc -m64 -ffreestanding -fno-pie -nostdlib -nostdinc -mno-red-zone -fno-stack-protector -I src/kernel -c src/kernel/gdt.c -o build/gdt.o
+	gcc -m64 -ffreestanding -fno-pie -nostdlib -nostdinc -mno-red-zone -fno-stack-protector -I src/kernel -c src/kernel/vga.c -o build/vga.o
+	ld -m elf_x86_64 -T linker.ld --oformat binary -o build/kernel.bin build/kernel.o build/vga.o build/gdt.o build/gdt_asm.o
 
 os.bin: build/boot.bin build/stage2.bin build/stage3.bin build/kernel.bin
 	cat build/boot.bin build/stage2.bin build/stage3.bin build/kernel.bin > build/os.bin

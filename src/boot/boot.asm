@@ -29,8 +29,7 @@ start:
     jc disk_error                      ; jump if carry flag set
 
     mov dl, [boot_drive]               ; reload drive number
-    mov [0x7C00 + 510], dl             ; store drive number for stage 2
-    jmp 0x7E00                         ; jump to stage 2
+    jmp 0x7E00
 
 ; disk_error
 ; called if the disk read fails

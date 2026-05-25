@@ -7,8 +7,7 @@
 [ORG 0x7E00]
 
 start:
-    mov al, [0x7C00 + 510]             ; read drive number from stage 1
-    mov [boot_drive], al               ; store it
+    mov [boot_drive], dl
 
     call clear_screen
 
@@ -63,7 +62,7 @@ menu:
 option1:
     ;                                  ; load and boot stage 3
     mov ah, 0x02                       ; read sectors function
-    mov al, 0x01                       ; number of sectors to read
+    mov al, 0x02                       ; number of sectors to read
     mov ch, 0x00                       ; cylinder 0
     mov cl, 0x04                       ; sector 4 (stage 3)
     mov dh, 0x00                       ; head 0
@@ -71,6 +70,7 @@ option1:
     mov bx, 0x8000                     ; load into memory at 0x8000
     int 0x13
     jc .disk_error                     ; jump if error
+    mov dl, [boot_drive]               ; restore dl for stage 3 (int 0x13 may have clobbered it)
     jmp 0x8000                         ; jump to stage 3
 
 .disk_error:

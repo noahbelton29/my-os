@@ -96,7 +96,7 @@ protected_mode:
     or eax, (1 << 8)                   ; set LME bit long mode enable, bit 8
     wrmsr                              ; write back
 
-    ;                                  ; enable paging in CR0 (activates long mode)
+    ;                                  ; enable paging in CR0, activates long mode
     mov eax, cr0
     or eax, (1 << 31)                  ; set PG bit: bit 31
     mov cr0, eax
@@ -114,12 +114,8 @@ long_mode:
     mov ss, ax
     mov rsp, 0x90000                   ; set 64-bit stack pointer
 
-    ;                                  ; write "64" to top-left of VGA in green to confirm long mode
-    mov rdi, 0xB8000                   ; VGA buffer address
-    mov byte [rdi],     '6'            ; character '6'
-    mov byte [rdi + 1], 0x0A           ; bright green on black
-    mov byte [rdi + 2], '4'            ; character '4'
-    mov byte [rdi + 3], 0x0A           ; bright green on black
+    mov rax, 0x9000
+    call rax
 
 .hang:
     cli                                ; disable interrupts
@@ -133,7 +129,7 @@ dap:
     dw 0x10                            ; number of sectors to read (16)
     dw 0x9000                          ; offset to load into
     dw 0x0000                          ; segment to load into 0x0000:0x9000
-    dq 0x0000000000000004              ; LBA start sector: sector 4 = kernel, 0-indexed
+    dq 0x0000000000000005              ; LBA start sector: sector 5 = kernel, 0-indexed
 
 boot_drive      db 0
 msg_disk_error  db "Kernel load failed!", 0
@@ -150,4 +146,4 @@ gdt_descriptor:
     dw gdt_end - gdt_start - 1         ; GDT size in bytes minus 1
     dd gdt_start                       ; linear address of GDT
 
-times 512 - ($ - $$) db 0
+times 1024 - ($ - $$) db 0
