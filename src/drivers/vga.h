@@ -6,7 +6,7 @@
 #ifndef VGA_H
 #define VGA_H
 
-#include "types.h"
+#include "../kernel/types.h"
 
 #define VGA_BASE  0xB8000 // VGA text buffer address
 #define VGA_COLS  80      // columns per row

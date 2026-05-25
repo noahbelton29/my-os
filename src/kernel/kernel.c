@@ -1,5 +1,5 @@
-#include "vga.h"
-#include "gdt.h"
+#include "../drivers/vga.h"
+#include "../arch/x86_64/cpu/gdt.h"
 
 void kernel_main() {
     vga_clear();

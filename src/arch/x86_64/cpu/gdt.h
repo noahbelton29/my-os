@@ -6,7 +6,7 @@
 #ifndef GDT_H
 #define GDT_H
 
-#include "types.h"
+#include "../../../kernel/types.h"
 
 typedef struct {
     uint16_t limit_low;               // lower 16 bits of segment limit

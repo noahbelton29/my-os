@@ -1,29 +1,57 @@
-all: os.bin
+BIOS_DIR    := src/arch/x86_64/bios
+CPU_DIR     := src/arch/x86_64/cpu
+KERNEL_DIR  := src/kernel
+DRIVERS_DIR := src/drivers
 
-build/boot.bin: src/boot/boot.asm
-	nasm -f bin src/boot/boot.asm -o build/boot.bin
+CFLAGS := -m64 -ffreestanding -fno-pie -nostdlib -nostdinc \
+          -mno-red-zone -fno-stack-protector \
+          -I $(KERNEL_DIR) -I $(CPU_DIR) -I $(DRIVERS_DIR)
 
-build/stage2.bin: src/boot/stage2.asm
-	nasm -f bin src/boot/stage2.asm -o build/stage2.bin
+LINKER := src/arch/x86_64/linker.ld
 
-build/stage3.bin: src/boot/stage3.asm
-	nasm -f bin src/boot/stage3.asm -o build/stage3.bin
+BUILD     := build
+OBJ_DIR   := $(BUILD)/obj
+BIN_DIR   := $(BUILD)/bin
 
-build/kernel.bin: src/kernel/kernel.c src/kernel/gdt.c src/kernel/gdt.asm src/kernel/vga.c linker.ld
-	nasm -f elf64 src/kernel/gdt.asm -o build/gdt_asm.o
-	gcc -m64 -ffreestanding -fno-pie -nostdlib -nostdinc -mno-red-zone -fno-stack-protector -I src/kernel -c src/kernel/kernel.c -o build/kernel.o
-	gcc -m64 -ffreestanding -fno-pie -nostdlib -nostdinc -mno-red-zone -fno-stack-protector -I src/kernel -c src/kernel/gdt.c -o build/gdt.o
-	gcc -m64 -ffreestanding -fno-pie -nostdlib -nostdinc -mno-red-zone -fno-stack-protector -I src/kernel -c src/kernel/vga.c -o build/vga.o
-	ld -m elf_x86_64 -T linker.ld --oformat binary -o build/kernel.bin build/kernel.o build/vga.o build/gdt.o build/gdt_asm.o
+BIOS_SRCS := $(wildcard $(BIOS_DIR)/*.asm)
+BIOS_BINS := $(patsubst $(BIOS_DIR)/%.asm, $(BIN_DIR)/%.bin, $(BIOS_SRCS))
 
-os.bin: build/boot.bin build/stage2.bin build/stage3.bin build/kernel.bin
-	cat build/boot.bin build/stage2.bin build/stage3.bin build/kernel.bin > build/os.bin
-	truncate -s 32K build/os.bin
+C_SRCS    := $(wildcard $(KERNEL_DIR)/*.c $(DRIVERS_DIR)/*.c $(CPU_DIR)/*.c)
+C_OBJS    := $(patsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(C_SRCS)))
 
-run: os.bin
-	qemu-system-x86_64 -drive format=raw,file=build/os.bin,index=0,media=disk -boot c
+ASM_SRCS  := $(wildcard $(CPU_DIR)/*.asm)
+ASM_OBJS  := $(patsubst $(CPU_DIR)/%.asm, $(OBJ_DIR)/%_asm.o, $(ASM_SRCS))
+
+ALL_OBJS  := $(C_OBJS) $(ASM_OBJS)
+
+vpath %.c   $(KERNEL_DIR) $(DRIVERS_DIR) $(CPU_DIR)
+vpath %.asm $(CPU_DIR)
+
+all: $(BUILD)/os.bin
+
+$(OBJ_DIR) $(BIN_DIR):
+	mkdir -p $@
+
+$(BIOS_BINS): $(BIN_DIR)/%.bin: $(BIOS_DIR)/%.asm | $(BIN_DIR)
+	nasm -f bin $< -o $@
+
+$(C_OBJS): $(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
+	gcc $(CFLAGS) -c $< -o $@
+
+$(ASM_OBJS): $(OBJ_DIR)/%_asm.o: %.asm | $(OBJ_DIR)
+	nasm -f elf64 $< -o $@
+
+$(BIN_DIR)/kernel.bin: $(ALL_OBJS) | $(BIN_DIR)
+	ld -m elf_x86_64 -T $(LINKER) --oformat binary -o $@ $^
+
+$(BUILD)/os.bin: $(BIOS_BINS) $(BIN_DIR)/kernel.bin
+	cat $(BIOS_BINS) $(BIN_DIR)/kernel.bin > $@
+	truncate -s 32K $@
+
+run: $(BUILD)/os.bin
+	qemu-system-x86_64 -drive format=raw,file=$(BUILD)/os.bin,index=0,media=disk -boot c
 
 clean:
-	rm -f build/*.bin build/*.o
+	rm -rf $(BUILD)
 
 .PHONY: all run clean

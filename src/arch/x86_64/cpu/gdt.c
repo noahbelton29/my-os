@@ -13,13 +13,13 @@ static gdt_descriptor_t gdt_desc;
 // gdt_set_entry
 // fills one GDT entry
 static void gdt_set_entry(int i, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity) {
-    gdt[i].base_low    = base & 0xFFFF;               // lower 16 bits of base
-    gdt[i].base_mid    = (base >> 16) & 0xFF;         // middle 8 bits of base
-    gdt[i].base_high   = (base >> 24) & 0xFF;         // upper 8 bits of base
-    gdt[i].limit_low   = limit & 0xFFFF;              // lower 16 bits of limit
-    gdt[i].granularity = (granularity & 0xF0)         // upper flags nibble
-        | ((limit >> 16) & 0x0F);                     // upper 4 bits of limit
-    gdt[i].access      = access;                      // access byte
+    gdt[i].base_low    = base & 0xFFFF;       // lower 16 bits of base
+    gdt[i].base_mid    = (base >> 16) & 0xFF; // middle 8 bits of base
+    gdt[i].base_high   = (base >> 24) & 0xFF; // upper 8 bits of base
+    gdt[i].limit_low   = limit & 0xFFFF;      // lower 16 bits of limit
+    gdt[i].granularity = (granularity & 0xF0) // upper flags nibble
+        | ((limit >> 16) & 0x0F);             // upper 4 bits of limit
+    gdt[i].access      = access;              // access byte
 }
 
 // gdt_load
@@ -43,11 +43,11 @@ void gdt_init() {
 // verifies the GDT loaded correctly by reading back the descriptor
 // returns 1 on pass, 0 on fail
 int gdt_test() {
-    uint8_t gdtr[10];                              // buffer for sgdt result
-    __asm__ volatile ("sgdt %0" : "=m"(gdtr));     // store GDT descriptor
+    uint8_t gdtr[10];
+    __asm__ volatile ("sgdt %0" : "=m"(gdtr)); // store GDT descriptor
 
-    uint16_t limit = *(uint16_t *)&gdtr[0];        // first 2 bytes = limit
-    if (limit == 0 || limit < 39) return 0;        // 5 entries * 8 bytes - 1 = 39
+    uint16_t limit = *(uint16_t *)&gdtr[0];    // first 2 bytes = limit
+    if (limit == 0 || limit < 39) return 0;    // 5 entries * 8 bytes - 1 = 39
 
     return 1;
 }
